@@ -1,0 +1,6 @@
+apache-airflow-providers-http
+pyspark==3.5.1
+requests
+pandas
+pyarrow
+psycopg2-binary==2.9.9
