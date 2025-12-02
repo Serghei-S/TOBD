@@ -1,0 +1,13 @@
+apiVersion: 1
+
+providers:
+  - name: 'Crypto Dashboards'
+    orgId: 1
+    folder: 'Crypto Analytics'
+    folderUid: 'crypto'
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /var/lib/grafana/dashboards
+

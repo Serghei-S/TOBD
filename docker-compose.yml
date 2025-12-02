@@ -2,7 +2,6 @@ x-airflow-common: &airflow-common
   build:
     context: ./airflow
     dockerfile: Dockerfile
-    # Включаем BuildKit кэширование
     args:
       BUILDKIT_INLINE_CACHE: 1
   env_file:
@@ -16,7 +15,7 @@ x-airflow-common: &airflow-common
     AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "true"
     AIRFLOW__SCHEDULER__SCHEDULER_HEARTBEAT_SEC: 10
     BITCOIN_API_URL: https://api.coingecko.com/api/v3/coins/bitcoin/market_chart
-    BITCOIN_LOOKBACK_DAYS: "30"
+    BITCOIN_LOOKBACK_DAYS: "365"
     BITCOIN_DB_HOST: postgres-dwh
     BITCOIN_DB_PORT: "5432"
     BITCOIN_DB_NAME: bitcoin
@@ -120,6 +119,25 @@ services:
     networks:
       - data-net
 
+  # Grafana для интерактивных дашбордов
+  grafana:
+    image: grafana/grafana:10.2.0
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      postgres-dwh:
+        condition: service_healthy
+    networks:
+      - data-net
+
 networks:
   data-net:
     driver: bridge
@@ -127,3 +145,4 @@ networks:
 volumes:
   airflow-db-data:
   postgres-dwh-data:
+  grafana-data:

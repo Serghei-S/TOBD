@@ -1,116 +1,148 @@
-# 📊 Bitcoin Data Platform
+# 🚀 Crypto Analytics Platform
 
-**Полноценная Big Data платформа** для сбора, обработки и визуализации данных о криптовалюте Bitcoin. Проект демонстрирует современный ETL-пайплайн с использованием Apache Airflow, PySpark и интерактивного дашборда.
+**Полноценная Big Data платформа** для сбора, обработки, машинного обучения и визуализации данных о криптовалютах. Проект демонстрирует современный ETL-пайплайн с Apache Airflow, PySpark, ML-прогнозами на XGBoost и интерактивными дашбордами.
 
 ---
 
 ## 🎯 Что делает проект
 
 Платформа автоматически:
-1. **Собирает данные** о курсе Bitcoin с публичного API CoinGecko
-2. **Сохраняет сырые данные** в JSON формате и PostgreSQL
-3. **Обрабатывает данные** с помощью Apache Spark (агрегация по дням)
+1. **Собирает данные** о курсах 5 криптовалют с CoinGecko API (365 дней истории)
+2. **Загружает Fear & Greed Index** — индекс настроений рынка
+3. **Обрабатывает данные** с помощью Apache Spark (агрегация, объёмы, market cap)
 4. **Загружает результаты** в аналитическое хранилище PostgreSQL
-5. **Визуализирует данные** через интерактивный Streamlit дашборд
+5. **Прогнозирует тренд** с помощью XGBoost (UP/DOWN/FLAT)
+6. **Визуализирует данные** через Streamlit и Grafana дашборды
 
 ---
 
-## 📡 Источник данных
+## 🪙 Поддерживаемые криптовалюты
 
-### CoinGecko API (бесплатный)
+| Монета | Символ | ID CoinGecko |
+|--------|--------|--------------|
+| Bitcoin | BTC | bitcoin |
+| Ethereum | ETH | ethereum |
+| BNB | BNB | binancecoin |
+| Solana | SOL | solana |
+| Cardano | ADA | cardano |
 
-**Endpoint:** `https://api.coingecko.com/api/v3/coins/bitcoin/market_chart`
+---
 
-**Параметры запроса:**
-| Параметр | Значение | Описание |
-|----------|----------|----------|
-| `vs_currency` | `usd` | Валюта для отображения цены |
-| `days` | `30` | Количество дней истории |
+## 📡 Источники данных
+
+### 1. CoinGecko API (бесплатный)
+
+**Endpoint:** `https://api.coingecko.com/api/v3/coins/{coin_id}/market_chart`
 
 **Получаемые данные:**
-- `prices` — массив [timestamp, price] с ценами Bitcoin в USD
+- `prices` — история цен в USD
 - `market_caps` — рыночная капитализация
 - `total_volumes` — объёмы торгов
 
-**Пример ответа API:**
-```json
-{
-  "prices": [
-    [1701388800000, 43521.23],
-    [1701392400000, 43612.87],
-    ...
-  ]
-}
-```
+**Параметры:**
+| Параметр | Значение | Описание |
+|----------|----------|----------|
+| `vs_currency` | `usd` | Валюта |
+| `days` | `365` | Период истории |
 
-**Ограничения бесплатного API:**
-- 10-30 запросов в минуту
-- Данные обновляются каждые 1-5 минут
-- История до 365 дней
+### 2. Alternative.me Fear & Greed Index
+
+**Endpoint:** `https://api.alternative.me/fng/?limit=30`
+
+**Данные:**
+- `value` — индекс от 0 (страх) до 100 (жадность)
+- `value_classification` — категория (Extreme Fear, Fear, Neutral, Greed, Extreme Greed)
 
 ---
 
 ## 🏗️ Архитектура системы
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                         BITCOIN DATA PLATFORM                        │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│   ┌──────────────┐                                                  │
-│   │  CoinGecko   │                                                  │
-│   │     API      │                                                  │
-│   └──────┬───────┘                                                  │
-│          │ HTTP GET (каждые 6 часов)                                │
-│          ▼                                                          │
-│   ┌──────────────────────────────────────────────────────────┐      │
-│   │                    APACHE AIRFLOW                         │      │
-│   │  ┌────────────┐   ┌────────────┐   ┌────────────┐        │      │
-│   │  │  Extract   │──▶│ Transform  │──▶│    Load    │        │      │
-│   │  │  (Python)  │   │  (PySpark) │   │  (Python)  │        │      │
-│   │  └────────────┘   └────────────┘   └────────────┘        │      │
-│   └──────────────────────────────────────────────────────────┘      │
-│          │                   │                   │                  │
-│          ▼                   ▼                   ▼                  │
-│   ┌────────────┐      ┌────────────┐      ┌────────────┐           │
-│   │  RAW JSON  │      │  Parquet   │      │ PostgreSQL │           │
-│   │   Files    │      │   Files    │      │    DWH     │           │
-│   └────────────┘      └────────────┘      └─────┬──────┘           │
-│                                                  │                  │
-│                                                  ▼                  │
-│                                          ┌────────────┐            │
-│                                          │  Streamlit │            │
-│                                          │  Dashboard │            │
-│                                          └────────────┘            │
-└─────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│                      CRYPTO ANALYTICS PLATFORM                          │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│   ┌──────────────┐     ┌──────────────┐                                │
+│   │  CoinGecko   │     │ Fear & Greed │                                │
+│   │     API      │     │     API      │                                │
+│   └──────┬───────┘     └──────┬───────┘                                │
+│          │                    │                                         │
+│          └────────┬───────────┘                                         │
+│                   ▼                                                     │
+│   ┌─────────────────────────────────────────────────────────────┐      │
+│   │                    APACHE AIRFLOW                            │      │
+│   │  ┌────────────┐   ┌────────────┐   ┌────────────┐           │      │
+│   │  │  Extract   │──▶│ Transform  │──▶│    Load    │           │      │
+│   │  │  5 coins   │   │  (PySpark) │   │ PostgreSQL │           │      │
+│   │  │ + F&G Index│   │            │   │            │           │      │
+│   │  └────────────┘   └────────────┘   └────────────┘           │      │
+│   └─────────────────────────────────────────────────────────────┘      │
+│                              │                                          │
+│                              ▼                                          │
+│   ┌─────────────────────────────────────────────────────────────┐      │
+│   │                    POSTGRESQL DWH                            │      │
+│   │  • crypto_daily_metrics (цены, объёмы, market cap)          │      │
+│   │  • fear_greed_index (настроения рынка)                      │      │
+│   │  • raw_crypto_prices (сырые данные)                         │      │
+│   └───────────────────────┬─────────────────────────────────────┘      │
+│                           │                                             │
+│           ┌───────────────┼───────────────┐                            │
+│           ▼               ▼               ▼                            │
+│   ┌──────────────┐ ┌──────────────┐ ┌──────────────┐                   │
+│   │  Streamlit   │ │   Grafana    │ │   XGBoost    │                   │
+│   │  Dashboard   │ │  Dashboards  │ │  ML Models   │                   │
+│   │   :8501      │ │    :3000     │ │  Trend Pred  │                   │
+│   └──────────────┘ └──────────────┘ └──────────────┘                   │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 🔄 ETL Pipeline (DAG: bitcoin_etl)
+## 🤖 Machine Learning
 
-### Task 1: Extract (`extract_bitcoin_prices`)
-- Запрос к CoinGecko API
-- Сохранение JSON в `data/raw/bitcoin_YYYY-MM-DD.json`
-- Запись сырых данных в таблицу `raw_bitcoin_prices`
+### Прогнозирование тренда (XGBoost Classifier)
+
+Модель классифицирует направление движения цены:
+- **UP** — рост более 2%
+- **DOWN** — падение более 2%
+- **FLAT** — боковое движение (±2%)
+
+**Features (признаки):**
+- Лаговые цены (1, 3, 7, 14, 30 дней)
+- Скользящие средние (MA7, MA14, MA30)
+- RSI (Relative Strength Index)
+- Волатильность
+- Изменения цены за периоды
+
+**Горизонты прогноза:** 7, 14, 30 дней
+
+### Прогноз цены (XGBoost Regressor)
+
+Предсказание абсолютной цены на:
+- Завтра (1 день)
+- Неделю (7 дней)
+- Месяц (30 дней)
+
+---
+
+## 🔄 ETL Pipeline (DAG: crypto_etl)
+
+### Task 1: Extract (`extract_crypto_prices`)
+- Загрузка данных 5 криптовалют с CoinGecko
+- Загрузка Fear & Greed Index
+- Сохранение в JSON и PostgreSQL
 
 ### Task 2: Transform (`transform_with_spark`)
-- Чтение JSON файла через PySpark
-- Парсинг временных меток (Unix → DateTime)
-- Агрегация по дням:
-  - `open_price_usd` — цена открытия дня
-  - `close_price_usd` — цена закрытия дня
-  - `avg_price_usd` — средняя цена за день
-  - `max_price_usd` — максимальная цена
-  - `min_price_usd` — минимальная цена
-  - `samples_per_day` — количество точек данных
-- Сохранение в Parquet: `data/processed/bitcoin_YYYY-MM-DD/`
+- PySpark агрегация по дням:
+  - Цены (open, close, avg, max, min)
+  - Объёмы торгов (volume_usd)
+  - Рыночная капитализация (market_cap_usd)
+- Сохранение в Parquet
 
 ### Task 3: Load (`load_to_postgres`)
-- Чтение Parquet файла
-- Загрузка в таблицу `bitcoin_daily_metrics` (UPSERT)
+- Загрузка в `crypto_daily_metrics` (UPSERT)
 
-**Расписание:** каждые 6 часов (`timedelta(hours=6)`)
+**Расписание:** каждые 6 часов
 
 ---
 
@@ -118,12 +150,14 @@
 
 | Компонент | Технология | Версия | Назначение |
 |-----------|------------|--------|------------|
-| Оркестрация | Apache Airflow | 2.9.2 | Планирование и мониторинг ETL |
-| Обработка данных | PySpark | 3.5.1 | Трансформация и агрегация |
-| База данных | PostgreSQL | 15 | Хранение RAW и DWH |
-| Визуализация | Streamlit | 1.37.0 | Интерактивный дашборд |
+| Оркестрация | Apache Airflow | 2.9.2 | ETL pipeline |
+| Обработка данных | PySpark | 3.5.1 | Трансформация |
+| База данных | PostgreSQL | 15 | DWH |
+| ML | XGBoost | 2.0+ | Прогнозирование |
+| Визуализация | Streamlit | 1.37+ | Интерактивный дашборд |
+| Мониторинг | Grafana | 10.2 | Дашборды и алерты |
+| Графики | Plotly | 5.22+ | Визуализации |
 | Контейнеризация | Docker | - | Изоляция сервисов |
-| Графики | Plotly | 5.22.0 | Интерактивные визуализации |
 
 ---
 
@@ -133,32 +167,35 @@
 bigdata_project/
 ├── airflow/
 │   ├── dags/
-│   │   ├── __init__.py
-│   │   └── bitcoin_etl_dag.py    # Основной DAG
-│   ├── logs/                      # Логи выполнения задач
-│   ├── plugins/                   # Кастомные плагины Airflow
-│   ├── Dockerfile                 # Образ Airflow + PySpark
-│   └── requirements.txt           # Python зависимости
-│
-├── spark_jobs/
-│   ├── __init__.py
-│   └── bitcoin_transform.py       # Spark трансформации
-│
-├── streamlit_app/
-│   ├── app.py                     # Дашборд
+│   │   └── bitcoin_etl_dag.py    # DAG для 5 криптовалют
+│   ├── logs/
 │   ├── Dockerfile
 │   └── requirements.txt
 │
+├── spark_jobs/
+│   └── bitcoin_transform.py       # Spark трансформации
+│
+├── streamlit_app/
+│   ├── app.py                     # Основной дашборд
+│   ├── ml_model.py                # XGBoost модели
+│   ├── Dockerfile
+│   └── requirements.txt
+│
+├── grafana/
+│   ├── provisioning/
+│   │   ├── datasources/           # PostgreSQL datasource
+│   │   └── dashboards/            # Dashboard config
+│   └── dashboards/
+│       └── crypto_analytics.json  # Готовый дашборд
+│
 ├── data/
-│   ├── raw/                       # Сырые JSON файлы
-│   └── processed/                 # Parquet файлы после Spark
+│   ├── raw/                       # JSON файлы
+│   └── processed/                 # Parquet файлы
 │
-├── docs/
-│   └── architecture.md            # Документация архитектуры
-│
-├── docker-compose.yml             # Конфигурация всех сервисов
-├── airflow.env                    # Переменные окружения
-└── README.md                      # Этот файл
+├── docker-compose.yml
+├── airflow.env
+├── .gitignore
+└── README.md
 ```
 
 ---
@@ -172,92 +209,118 @@ bigdata_project/
 ### Запуск
 
 ```bash
-# 1. Клонирование репозитория
-git clone <repository-url>
+# 1. Клонирование
+git clone https://github.com/your-repo/bigdata_project.git
 cd bigdata_project
 
 # 2. Запуск всех сервисов
 docker compose up -d
 
 # 3. Дождитесь инициализации (~2-3 минуты)
-docker compose logs -f airflow-init
+docker compose logs -f airflow-scheduler
 ```
 
 ### Доступ к сервисам
 
 | Сервис | URL | Логин | Пароль |
 |--------|-----|-------|--------|
-| Airflow UI | http://localhost:8080 | admin | admin |
-| Streamlit | http://localhost:8501 | - | - |
+| **Streamlit** | http://localhost:8501 | - | - |
+| **Grafana** | http://localhost:3000 | admin | admin |
+| **Airflow UI** | http://localhost:8080 | admin | admin |
 | PostgreSQL DWH | localhost:5433 | analytics | analytics |
 
 ---
 
-## ⚙️ Конфигурация
+## 📊 Функции дашборда Streamlit
 
-### Переменные окружения (airflow.env)
+### 📈 Аналитика
+- Выбор криптовалюты (BTC, ETH, BNB, SOL, ADA)
+- Графики цен (линейный, candlestick, область)
+- KPI метрики (цена, волатильность, объёмы)
+- Fear & Greed Index
 
-```env
-# API
-BITCOIN_API_URL=https://api.coingecko.com/api/v3/coins/bitcoin/market_chart
-BITCOIN_LOOKBACK_DAYS=30
-COINGECKO_API_KEY=CG-DemoAPIKey
+### 🔮 ML Прогнозы
+- Предсказание цены на 1/7/30 дней
+- Классификация тренда (UP/DOWN/FLAT)
+- Вероятности и метрики модели
 
-# PostgreSQL DWH
-BITCOIN_DB_HOST=postgres-dwh
-BITCOIN_DB_PORT=5432
-BITCOIN_DB_NAME=bitcoin
-BITCOIN_DB_USER=analytics
-BITCOIN_DB_PASSWORD=analytics
-```
+### 🔗 Корреляция
+- Матрица корреляции 5 криптовалют
+- Нормализованное сравнение динамики
+
+### 📋 Данные
+- Таблица с историей
+- Экспорт в CSV
+
+---
+
+## 📊 Grafana дашборды
+
+Готовый дашборд включает:
+- 📈 График цен криптовалют
+- 😨 Fear & Greed Gauge
+- 💰 Текущие цены (Stat)
+- 📊 Объёмы торгов
+- 🎢 Волатильность
+- 📈 Сравнение всех криптовалют
 
 ---
 
 ## 📊 Схема базы данных
 
-### Таблица: `raw_bitcoin_prices`
+### `crypto_daily_metrics`
 ```sql
-CREATE TABLE raw_bitcoin_prices (
+CREATE TABLE crypto_daily_metrics (
     id SERIAL PRIMARY KEY,
-    logical_date DATE NOT NULL,
-    payload JSONB NOT NULL,
-    inserted_at TIMESTAMPTZ DEFAULT NOW()
-);
-```
-
-### Таблица: `bitcoin_daily_metrics`
-```sql
-CREATE TABLE bitcoin_daily_metrics (
-    event_date DATE PRIMARY KEY,
+    coin_id VARCHAR(50) NOT NULL,
+    coin_symbol VARCHAR(10) NOT NULL,
+    coin_name VARCHAR(50) NOT NULL,
+    event_date DATE NOT NULL,
     open_price_usd NUMERIC,
     close_price_usd NUMERIC,
     avg_price_usd NUMERIC,
     max_price_usd NUMERIC,
     min_price_usd NUMERIC,
+    volume_usd NUMERIC,
+    market_cap_usd NUMERIC,
     samples_per_day INTEGER,
-    processed_at TIMESTAMPTZ
+    processed_at TIMESTAMPTZ,
+    UNIQUE(coin_id, event_date)
+);
+```
+
+### `fear_greed_index`
+```sql
+CREATE TABLE fear_greed_index (
+    id SERIAL PRIMARY KEY,
+    event_date DATE UNIQUE NOT NULL,
+    value INTEGER NOT NULL,
+    value_classification VARCHAR(50)
 );
 ```
 
 ---
 
-## 🔧 Отладка
+## 🔧 Полезные команды
 
 ```bash
 # Статус контейнеров
 docker compose ps
 
-# Логи Airflow Scheduler
+# Логи сервисов
 docker compose logs -f airflow-scheduler
-
-# Логи Streamlit
 docker compose logs -f streamlit
+docker compose logs -f grafana
 
 # Подключение к PostgreSQL
 docker compose exec postgres-dwh psql -U analytics -d bitcoin
 
 # Проверка данных
-SELECT * FROM bitcoin_daily_metrics ORDER BY event_date DESC LIMIT 10;
+SELECT coin_id, COUNT(*), MIN(event_date), MAX(event_date) 
+FROM crypto_daily_metrics GROUP BY coin_id;
+
+# Перезапуск ETL
+docker compose restart airflow-scheduler
 ```
 
 ---
@@ -265,29 +328,42 @@ SELECT * FROM bitcoin_daily_metrics ORDER BY event_date DESC LIMIT 10;
 ## 🛑 Остановка
 
 ```bash
-# Остановить все сервисы
+# Остановить сервисы
 docker compose down
 
-# Остановить и удалить volumes (ОСТОРОЖНО: удалит данные)
+# Удалить с данными
 docker compose down -v
 ```
 
 ---
 
+## ✅ Реализованные фичи
+
+- [x] Поддержка 5 криптовалют
+- [x] 365 дней истории
+- [x] Объёмы торгов и Market Cap
+- [x] Fear & Greed Index
+- [x] Корреляция криптовалют
+- [x] ML прогнозирование (XGBoost)
+- [x] Классификация тренда (UP/DOWN/FLAT)
+- [x] Интерактивные Grafana дашборды
+- [x] Streamlit визуализация
+
+---
+
 ## 📈 Roadmap
 
-- [ ] Добавить больше криптовалют (ETH, BNB, SOL)
-- [ ] Интеграция с Apache Kafka для real-time данных
-- [ ] Хранение сырых данных в MinIO/S3
-- [ ] Мониторинг через Grafana + Prometheus
-- [ ] Алерты в Telegram при аномалиях цены
-- [ ] ML модель для прогнозирования цены
+- [ ] Real-time данные через WebSocket
+- [ ] Интеграция Apache Kafka
+- [ ] Алерты в Telegram
+- [ ] Хранение в MinIO/S3
+- [ ] LSTM для временных рядов
 
 ---
 
 ## 👤 Автор
 
-Учебный проект по курсу Big Data
+Учебный проект по курсу Big Data / TOBD
 
 ---
 

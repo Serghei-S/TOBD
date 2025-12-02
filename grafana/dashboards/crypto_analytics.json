@@ -1,0 +1,222 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {"type": "postgres", "uid": "postgres-dwh"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {
+            "axisCenteredZero": false,
+            "axisLabel": "Цена (USD)",
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": true
+          },
+          "mappings": [],
+          "unit": "currencyUSD"
+        }
+      },
+      "gridPos": {"h": 10, "w": 16, "x": 0, "y": 0},
+      "id": 1,
+      "options": {
+        "legend": {"calcs": ["last", "mean"], "displayMode": "table", "placement": "right"},
+        "tooltip": {"mode": "multi", "sort": "desc"}
+      },
+      "title": "📈 Цены криптовалют",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": {"type": "postgres", "uid": "postgres-dwh"},
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT event_date as time, close_price_usd as value, coin_symbol as metric FROM crypto_daily_metrics WHERE coin_id = 'bitcoin' ORDER BY event_date",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {"type": "postgres", "uid": "postgres-dwh"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": null},
+              {"color": "orange", "value": 25},
+              {"color": "yellow", "value": 50},
+              {"color": "green", "value": 75}
+            ]
+          },
+          "unit": "none",
+          "max": 100,
+          "min": 0
+        }
+      },
+      "gridPos": {"h": 5, "w": 8, "x": 16, "y": 0},
+      "id": 2,
+      "options": {
+        "orientation": "horizontal",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      },
+      "title": "😨 Fear & Greed Index",
+      "type": "gauge",
+      "targets": [
+        {
+          "datasource": {"type": "postgres", "uid": "postgres-dwh"},
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT value FROM fear_greed_index ORDER BY event_date DESC LIMIT 1",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {"type": "postgres", "uid": "postgres-dwh"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "mappings": [],
+          "unit": "currencyUSD"
+        }
+      },
+      "gridPos": {"h": 5, "w": 8, "x": 16, "y": 5},
+      "id": 3,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "auto"
+      },
+      "title": "💰 Текущие цены",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": {"type": "postgres", "uid": "postgres-dwh"},
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT coin_symbol as metric, close_price_usd as value FROM crypto_daily_metrics WHERE event_date = (SELECT MAX(event_date) FROM crypto_daily_metrics) ORDER BY close_price_usd DESC",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {"type": "postgres", "uid": "postgres-dwh"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {
+            "axisCenteredZero": false,
+            "axisLabel": "Объём (USD)",
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "gradientMode": "hue",
+            "lineWidth": 1
+          },
+          "unit": "currencyUSD"
+        }
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 10},
+      "id": 4,
+      "title": "📊 Объёмы торгов Bitcoin",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": {"type": "postgres", "uid": "postgres-dwh"},
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT event_date as time, volume_usd as value FROM crypto_daily_metrics WHERE coin_id = 'bitcoin' AND volume_usd > 0 ORDER BY event_date",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {"type": "postgres", "uid": "postgres-dwh"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {
+            "axisCenteredZero": false,
+            "axisLabel": "Volatility %",
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "opacity",
+            "lineWidth": 2
+          },
+          "unit": "percent"
+        }
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 10},
+      "id": 5,
+      "title": "🎢 Волатильность Bitcoin (%)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": {"type": "postgres", "uid": "postgres-dwh"},
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT event_date as time, ((max_price_usd - min_price_usd) / avg_price_usd * 100) as value FROM crypto_daily_metrics WHERE coin_id = 'bitcoin' ORDER BY event_date",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {"type": "postgres", "uid": "postgres-dwh"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"drawStyle": "line", "fillOpacity": 0, "lineWidth": 2},
+          "unit": "currencyUSD"
+        }
+      },
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 18},
+      "id": 6,
+      "title": "📈 Сравнение криптовалют",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": {"type": "postgres", "uid": "postgres-dwh"},
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT event_date as time, close_price_usd as value, coin_symbol as metric FROM crypto_daily_metrics ORDER BY event_date, coin_symbol",
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "refresh": "5m",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["crypto", "bitcoin", "analytics"],
+  "templating": {"list": []},
+  "time": {"from": "now-90d", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "🚀 Crypto Analytics Dashboard",
+  "uid": "crypto-main",
+  "version": 1
+}
